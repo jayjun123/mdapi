@@ -285,6 +285,57 @@ const chipExecutors: Record<string, ChipExecutor> = {
     };
   },
 
+  translator: ({ chip, inputs }) => {
+    const text = normalizeText(inputs.text);
+    const targetLang = normalizeText(firstDefined(inputs.targetLang, chip.config.targetLang, '영어'));
+    const out = text
+      ? `(${targetLang}) 번역(모의 결과): ${text}`
+      : '(입력 글이 비어 있어 번역할 내용이 없습니다.)';
+    return {
+      outputs: {
+        out,
+        meta: {
+          targetLang,
+          inputLength: text.length,
+          mock: true,
+        },
+      },
+    };
+  },
+
+  rephraser: ({ chip, inputs }) => {
+    const text = normalizeText(inputs.text);
+    const style = normalizeText(firstDefined(inputs.style, chip.config.style, '더 자연스럽게'));
+    const out = text
+      ? `(${style}) 다시 쓴 문장(모의 결과): ${text}`
+      : '(입력 문장이 비어 있습니다.)';
+    return {
+      outputs: {
+        out,
+        meta: { style, inputLength: text.length, mock: true },
+      },
+    };
+  },
+
+  question_answer: ({ chip, inputs }) => {
+    const question = normalizeText(inputs.question);
+    const context = normalizeText(inputs.context);
+    const answer = [
+      `### ${chip.config.label ?? chip.name} 답변(모의 결과)`,
+      '',
+      context ? `- 문맥(참고 자료): ${context.slice(0, 220)}\n` : '- 문맥: (없음)\n',
+      `- 질문: ${question.slice(0, 220)}`,
+      '',
+      '이 답변은 실제 모델 호출 대신 mock 결과입니다. (프로덕션에서는 LLM API로 연결하세요.)',
+    ].join('\n');
+    return {
+      outputs: {
+        answer,
+        meta: { hasContext: Boolean(context), questionLength: question.length, mock: true },
+      },
+    };
+  },
+
   classifier: ({ chip, inputs }) => {
     const text = normalizeText(firstDefined(inputs.text, inputs.json, inputs.image, ''));
     const lowered = text.toLowerCase();
