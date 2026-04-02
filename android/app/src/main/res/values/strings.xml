@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Breadboard AI Builder</string>
+    <string name="title_activity_main">Breadboard AI Builder</string>
+    <string name="package_name">com.breadboard.ai.builder</string>
+    <string name="custom_url_scheme">com.breadboard.ai.builder</string>
+</resources>
