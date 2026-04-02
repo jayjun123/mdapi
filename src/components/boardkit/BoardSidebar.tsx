@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import { chipCategories, chipDefinitions, type ChipCategory } from "@/core/board/chipDefinitions";
+import { BOARD_LIBRARY_STORAGE_KEY } from "@/hooks/useBoardLibrary";
 import { cn } from "@/lib/utils";
 
 export const BOARD_SIDEBAR_DRAG_MIME = "application/x-breadboard-chip-type";
@@ -303,6 +304,20 @@ export function BoardSidebarControls({
           </div>
         ) : null}
       </section>
+
+      <p
+        style={{
+          margin: 0,
+          paddingTop: compact ? 6 : 10,
+          color: "#64748b",
+          fontSize: compact ? 10 : 12,
+          lineHeight: 1.45,
+        }}
+      >
+        <strong style={{ color: "#94a3b8" }}>저장 위치:</strong> 이 브라우저만의{" "}
+        <span style={{ color: "#a1a1aa" }}>localStorage</span> ({BOARD_LIBRARY_STORAGE_KEY}). 다른 기기·브라우저와
+        자동 동기화되지 않습니다. 백업은 JSON 저장/복사를 이용하세요.
+      </p>
     </aside>
   );
 }
@@ -360,6 +375,12 @@ export function BoardSidebarSummary({
 export function BoardSidebarPalette(props: BoardSidebarPaletteProps) {
   const { dragMimeType = BOARD_SIDEBAR_DRAG_MIME, compact = false } = props;
 
+  const [detailChipType, setDetailChipType] = useState<string | null>(null);
+  const detailChip = useMemo(() => {
+    if (!detailChipType) return null;
+    return chipDefinitions.find((c) => c.type === detailChipType) ?? null;
+  }, [detailChipType]);
+
   const groupedChips = useMemo(() => {
     return Object.entries(chipCategories).map(([categoryKey, title]) => ({
       categoryKey: categoryKey as ChipCategory,
@@ -376,7 +397,8 @@ export function BoardSidebarPalette(props: BoardSidebarPaletteProps) {
   };
 
   return (
-    <aside
+    <>
+      <aside
       style={{
         borderRadius: compact ? 12 : 18,
         padding: compact ? 8 : 14,
@@ -433,6 +455,7 @@ export function BoardSidebarPalette(props: BoardSidebarPaletteProps) {
                     draggable
                     title={chip.description}
                     onDragStart={(event) => handleDragStart(event, chip.type)}
+                    onDoubleClick={() => setDetailChipType(chip.type)}
                     style={{
                       textAlign: "left",
                       borderRadius: compact ? 8 : 14,
@@ -482,7 +505,179 @@ export function BoardSidebarPalette(props: BoardSidebarPaletteProps) {
           ))}
         </div>
       </section>
-    </aside>
+      </aside>
+
+      {detailChip ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setDetailChipType(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 60,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 18,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(860px, 96vw)",
+              maxHeight: "min(84vh, 720px)",
+              overflow: "hidden",
+              borderRadius: 18,
+              background: "rgba(15,23,42,0.96)",
+              border: "1px solid rgba(148,163,184,0.22)",
+              boxShadow: "0 18px 50px rgba(0,0,0,0.35)",
+            }}
+          >
+            <div
+              style={{
+                padding: "14px 16px",
+                borderBottom: "1px solid rgba(148,163,184,0.16)",
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>
+                  <strong style={{ fontSize: 18, color: "#f8fafc" }}>{detailChip.name}</strong>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: "#a1a1aa",
+                      padding: "4px 8px",
+                      borderRadius: 999,
+                      border: "1px solid rgba(148,163,184,0.22)",
+                      background: "rgba(2,6,23,0.35)",
+                    }}
+                  >
+                    size: {detailChip.size}
+                  </span>
+                </div>
+                <div style={{ color: "#94a3b8", fontSize: 13, fontWeight: 700 }}>카테고리: {detailChip.category}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailChipType(null)}
+                style={{
+                  border: "none",
+                  borderRadius: 12,
+                  padding: "8px 10px",
+                  background: "rgba(148,163,184,0.12)",
+                  color: "#e2e8f0",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+                aria-label="상세설명 닫기"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div style={{ padding: 16, overflowY: "auto", maxHeight: "calc(84vh - 70px)" }}>
+              <div style={{ color: "#e2e8f0", fontSize: 14, lineHeight: 1.6, marginBottom: 14 }}>
+                {detailChip.description}
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ color: "#f8fafc", fontSize: 14, fontWeight: 900, marginBottom: 8 }}>포트 타입 뜻</div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>EVT</strong>: 실행을 시작하는 신호(트리거)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>TXT</strong>: 글(문장/질문/응답 텍스트)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>NUM</strong>: 숫자 값(점수/개수/온도 등)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>BOOL</strong>: 참/거짓(켜짐/꺼짐)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>JSON</strong>: 표처럼 구조화된 데이터(객체/항목 묶음)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>LIST</strong>: 여러 개가 들어있는 목록(여러 줄)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>FILE</strong>: 파일(문서/원본 파일)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>IMG</strong>: 이미지(사진/캡처 1장)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>AUD</strong>: 오디오(말소리/녹음)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>URL</strong>: 웹 주소(링크)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>CODE</strong>: 코드 조각(프로그래밍 텍스트)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>DOC</strong>: 문서 형태(마크다운/글 한 편)
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.45 }}>
+                    <strong style={{ color: "#93c5fd" }}>ANY</strong>: 어떤 데이터든 가능(단, 타입 안정성은 낮음)
+                  </div>
+                  <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.45 }}>
+                    입력/출력은 포트 카드에서 이미 표시됩니다(입력=INPUT, 출력=OUTPUT).
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ color: "#f8fafc", fontSize: 14, fontWeight: 900 }}>포트(연결 지점)</div>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {detailChip.ports.map((p) => (
+                    <div
+                      key={`${detailChip.type}:${p.id}`}
+                      style={{
+                        borderRadius: 14,
+                        padding: 12,
+                        border: "1px solid rgba(148,163,184,0.16)",
+                        background: "rgba(2,6,23,0.38)",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                        <div style={{ color: "#93c5fd", fontWeight: 900, fontSize: 13 }}>
+                          {p.direction === "INPUT" ? "입력" : "출력"} · {p.name} <span style={{ color: "#a1a1aa" }}>({p.type})</span>
+                        </div>
+                        <div style={{ color: "#64748b", fontSize: 12, fontWeight: 700 }}>{p.id}</div>
+                      </div>
+                      {p.description ? (
+                        <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.5, marginTop: 6 }}>
+                          {p.description}
+                        </div>
+                      ) : (
+                        <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.5, marginTop: 6 }}>
+                          이 포트에 대한 추가 설명이 없습니다.
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
 

@@ -6,7 +6,11 @@ import { cloneBoardSerializable } from "@/core/board/boardSerializer";
 import { createEmptyBoard } from "@/core/board/initialBoard";
 import { deserializeBoardFromJson, serializeBoardToJson } from "@/core/board/boardSerializer";
 
-const STORAGE_KEY = "breadboard-ai-builder:library:v1";
+/** 브라우저 localStorage 키 — 보드 목록·활성 보드가 여기에 JSON으로 저장됩니다 */
+// v2로 올려서, 예전(데모가 들어있던) 로컬 저장값이 기본 화면을 덮어쓰지 않게 합니다.
+export const BOARD_LIBRARY_STORAGE_KEY = "breadboard-ai-builder:library:v2";
+
+const STORAGE_KEY = BOARD_LIBRARY_STORAGE_KEY;
 
 type LibraryItem = {
   id: string;
@@ -29,11 +33,11 @@ function loadFromStorage(): BoardLibraryState | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as {
-      v: 1;
+      v: number;
       activeId: string;
       boards: { id: string; data: string }[];
     };
-    if (parsed.v !== 1 || !parsed.activeId || !Array.isArray(parsed.boards)) return null;
+    if (parsed.v !== 2 || !parsed.activeId || !Array.isArray(parsed.boards)) return null;
     const items: LibraryItem[] = [];
     for (const row of parsed.boards) {
       const board = deserializeBoardFromJson(row.data, { strict: false, resetRuntime: false });
@@ -53,7 +57,7 @@ function loadFromStorage(): BoardLibraryState | null {
 function saveToStorage(state: BoardLibraryState): void {
   if (typeof window === "undefined") return;
   const payload = {
-    v: 1 as const,
+    v: 2 as const,
     activeId: state.activeId,
     boards: state.items.map((i) => ({ id: i.id, data: serializeBoardToJson(i.board, false) })),
   };

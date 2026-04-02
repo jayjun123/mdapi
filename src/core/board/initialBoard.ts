@@ -180,9 +180,11 @@ export function createRoutingDemoBoard(): BoardState {
   return board;
 }
 
-export const initialBoard = createDemoBoard();
+/** 앱 최초 진입·저장 없을 때 쓰는 빈 보드 (데모는 sampleBoards.createDemoBoard 등으로 별도 사용) */
+export const initialBoard = createEmptyBoard('보드');
 export const sampleBoards = {
-  initialBoard,
+  /** 문서 생성 데모 보드 */
+  demo: createDemoBoard(),
   routingBoard: createRoutingDemoBoard(),
 };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BoardCanvas } from "@/components/board/BoardCanvas";
 import {
   BoardSidebarPalette,
@@ -44,7 +44,7 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
 
   const [chipConfigOpen, setChipConfigOpen] = useState(false);
   const [chipConfigChipId, setChipConfigChipId] = useState<string | null>(null);
-  const [summaryOpen, setSummaryOpen] = useState(true);
+  const [summaryOpen, setSummaryOpen] = useState(false);
 
   const selectedChip = useMemo(() => {
     if (!chipConfigChipId) return null;
@@ -225,33 +225,56 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
     library.updateActiveBoard(next);
   }, [board, history, library, selection.chipIds]);
 
+  const performDeleteSelection = useCallback(
+    (chipIds: string[], edgeIds: string[]) => {
+      if (chipIds.length === 0 && edgeIds.length === 0) return;
+      const chipSet = new Set(chipIds);
+      const edgeSet = new Set(edgeIds);
+      history.set((current) => {
+        let chips = current.chips.filter((c) => !chipSet.has(c.id));
+        let edges = current.edges.filter((e) => !chipSet.has(e.fromChipId) && !chipSet.has(e.toChipId));
+        edges = edges.filter((e) => !edgeSet.has(e.id));
+        const next: BoardState = { ...current, chips, edges };
+        library.updateActiveBoard(next);
+        return next;
+      });
+      if (chipConfigChipId && chipSet.has(chipConfigChipId)) {
+        setChipConfigOpen(false);
+        setChipConfigChipId(null);
+      }
+      setSelection({ chipIds: [], edgeIds: [] });
+      setExecutionReport(null);
+    },
+    [chipConfigChipId, history, library],
+  );
+
   const handleDeleteSelectedChips = useCallback(() => {
-    const ids = selection.chipIds;
-    if (ids.length === 0) return;
-    if (typeof window !== "undefined") {
+    const { chipIds, edgeIds } = selection;
+    if (chipIds.length === 0 && edgeIds.length === 0) return;
+    if (chipIds.length > 0 && typeof window !== "undefined") {
       const msg =
-        ids.length === 1
+        chipIds.length === 1
           ? "선택한 칩 1개를 삭제할까요? 이 칩에 연결된 선도 함께 없어집니다."
-          : `선택한 칩 ${ids.length}개를 삭제할까요? 관련 연결선도 함께 없어집니다.`;
+          : `선택한 칩 ${chipIds.length}개를 삭제할까요? 관련 연결선도 함께 없어집니다.`;
       if (!window.confirm(msg)) return;
     }
-    const idSet = new Set(ids);
-    history.set((current) => {
-      const next: BoardState = {
-        ...current,
-        chips: current.chips.filter((c) => !idSet.has(c.id)),
-        edges: current.edges.filter((e) => !idSet.has(e.fromChipId) && !idSet.has(e.toChipId)),
-      };
-      library.updateActiveBoard(next);
-      return next;
-    });
-    if (chipConfigChipId && idSet.has(chipConfigChipId)) {
-      setChipConfigOpen(false);
-      setChipConfigChipId(null);
-    }
-    setSelection({ chipIds: [], edgeIds: [] });
-    setExecutionReport(null);
-  }, [chipConfigChipId, history, library, selection.chipIds]);
+    performDeleteSelection(chipIds, edgeIds);
+  }, [performDeleteSelection, selection.chipIds, selection.edgeIds]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const chipIds = selection.chipIds;
+      const edgeIds = selection.edgeIds;
+      if (chipIds.length === 0 && edgeIds.length === 0) return;
+      e.preventDefault();
+      performDeleteSelection(chipIds, edgeIds);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [performDeleteSelection, selection.chipIds, selection.edgeIds]);
 
   const sidebarShared = {
     isDirty: history.past.length > 0,
@@ -313,16 +336,16 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
             </div>
           ) : null}
 
-          {selection.chipIds.length > 0 ? (
+          {selection.chipIds.length > 0 || selection.edgeIds.length > 0 ? (
             <div className="pointer-events-none absolute bottom-3 right-3 z-[21]">
               <button
                 type="button"
                 onClick={handleDeleteSelectedChips}
                 className="pointer-events-auto inline-flex items-center gap-1.5 rounded-xl border border-red-500/50 bg-red-950/90 px-3 py-2 text-sm font-bold text-red-100 shadow-xl ring-1 ring-red-500/20 backdrop-blur-sm transition-colors hover:bg-red-900/90"
-                title="선택한 칩과 관련 연결선 삭제"
+                title="선택한 칩·연결선 삭제 (Delete 키와 동일)"
               >
                 <Trash2 className="size-4 shrink-0" aria-hidden />
-                선택칩 삭제
+                선택 삭제
               </button>
             </div>
           ) : null}
