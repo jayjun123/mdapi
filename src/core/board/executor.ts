@@ -24,6 +24,13 @@ export type ExecutorOptions = {
   continueOnError?: boolean;
   externalInputs?: ExecutorExternalInputs;
   now?: number;
+  /**
+   * 각 칩 실행 직전(데이터가 이 칩으로 들어오기 전 시각화용).
+   * UI에서 연결선 애니메이션 등에 사용 — 짧게 await 가능.
+   */
+  onChipExecutionStart?: (chipId: string, index: number, total: number) => void | Promise<void>;
+  /** 각 칩 실행 직후(다음 칩으로 넘어가기 전) */
+  onChipExecutionEnd?: (chipId: string, index: number, total: number) => void | Promise<void>;
 };
 
 export type ChipExecutionContext = {
@@ -792,13 +799,19 @@ export async function executeBoard(board: BoardState, options: ExecutorOptions =
   const reachable = startChipIds.length > 0 ? getReachableChipIds(runtimeBoard, startChipIds) : new Set<string>();
 
   const order = getTopologicalOrder(runtimeBoard).filter((chipId) => reachable.has(chipId));
+  const executableOrder = order.filter((chipId) => {
+    const c = getChipById(runtimeBoard, chipId);
+    return Boolean(c && !c.flags.disabled);
+  });
   const outputsByChip: ChipOutputRegistry = {};
   const records: ChipExecutionRecord[] = [];
 
-  for (const chipId of order) {
-    const chip = getChipById(runtimeBoard, chipId);
-    if (!chip || chip.flags.disabled) continue;
+  for (let i = 0; i < executableOrder.length; i++) {
+    const chipId = executableOrder[i];
+    const chip = getChipById(runtimeBoard, chipId)!;
+    const total = executableOrder.length;
 
+    await options.onChipExecutionStart?.(chipId, i, total);
     try {
       const record = await executeChip(runtimeBoard, chipId, outputsByChip, options);
       records.push(record);
@@ -833,6 +846,8 @@ export async function executeBoard(board: BoardState, options: ExecutorOptions =
           finalOutputs: [],
         };
       }
+    } finally {
+      await options.onChipExecutionEnd?.(chipId, i, total);
     }
   }
 

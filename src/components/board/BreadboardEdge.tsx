@@ -39,6 +39,7 @@ function BreadboardEdgeComponent(props: EdgeProps<ReactFlowBoardEdgeData>) {
     markerEnd,
     selected,
     data,
+    animated,
   } = props;
 
   const kind = data?.kind ?? "data";
@@ -64,6 +65,62 @@ function BreadboardEdgeComponent(props: EdgeProps<ReactFlowBoardEdgeData>) {
   const inX = labelX + (targetX - labelX) * 0.58;
   const inY = labelY + (targetY - labelY) * 0.58;
 
+  const baseW = selected ? 3.25 : ((style?.strokeWidth as number) ?? 2.25);
+
+  /** 실행 중: 아래는 흐릿한 궤적, 위는 밝은 빛이 20초에 한 바퀴 이동 */
+  if (animated) {
+    const glow =
+      "drop-shadow(0 0 5px rgba(255, 255, 250, 0.95)) drop-shadow(0 0 14px rgba(251, 191, 36, 0.75))";
+    return (
+      <>
+        <BaseEdge
+          id={id}
+          path={edgePath}
+          style={{
+            ...style,
+            stroke,
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+            strokeWidth: baseW,
+            strokeOpacity: 0.38,
+          }}
+          markerEnd={markerEnd}
+        />
+        <path
+          id={`${id}-pulse`}
+          d={edgePath}
+          fill="none"
+          className="react-flow__edge-path breadboard-edge-pulse-path"
+          style={{
+            stroke: "#fffef5",
+            strokeWidth: baseW + 1.1,
+            filter: glow,
+          }}
+        />
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: "absolute",
+              transform: `translate(${outX}px, ${outY}px) translate(-50%, -50%)`,
+              zIndex: 10,
+            }}
+          >
+            {labelPill("출력", accent)}
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              transform: `translate(${inX}px, ${inY}px) translate(-50%, -50%)`,
+              zIndex: 10,
+            }}
+          >
+            {labelPill("입력", accent)}
+          </div>
+        </EdgeLabelRenderer>
+      </>
+    );
+  }
+
   return (
     <>
       <BaseEdge
@@ -74,7 +131,7 @@ function BreadboardEdgeComponent(props: EdgeProps<ReactFlowBoardEdgeData>) {
           stroke,
           strokeLinecap: "round",
           strokeLinejoin: "round",
-          strokeWidth: selected ? 3.25 : (style?.strokeWidth as number) ?? 2.25,
+          strokeWidth: baseW,
           filter: selected ? `drop-shadow(0 0 4px ${stroke}88)` : undefined,
         }}
         markerEnd={markerEnd}

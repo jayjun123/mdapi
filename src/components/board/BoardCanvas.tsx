@@ -90,6 +90,8 @@ export type BoardCanvasProps = {
   showValidationPanel?: boolean;
   fitView?: boolean;
   droppedChipTypeDataKey?: string;
+  /** Run 시 현재 실행 중인 칩 id — 해당 칩에서 나가는 연결선에 흐름 애니메이션 */
+  flowPulseFromChipId?: string | null;
 };
 
 const nodeTypes: NodeTypes = {
@@ -118,6 +120,7 @@ function BoardCanvasInner({
   showValidationPanel = true,
   fitView = true,
   droppedChipTypeDataKey = 'application/x-breadboard-chip-type',
+  flowPulseFromChipId = null,
 }: BoardCanvasProps) {
   const reactFlow = useReactFlow<ReactFlowChipNodeData, ReactFlowBoardEdgeData>();
   const initialSnapshot = useMemo(() => boardToReactFlow(board), [board]);
@@ -431,6 +434,15 @@ function BoardCanvasInner({
 
   const validationSummary = useMemo(() => summarizeValidationReport(validationReport), [validationReport]);
 
+  const edgesWithFlow = useMemo(
+    () =>
+      snapshot.edges.map((e) => ({
+        ...e,
+        animated: flowPulseFromChipId ? e.source === flowPulseFromChipId : Boolean(e.animated),
+      })),
+    [snapshot.edges, flowPulseFromChipId],
+  );
+
   return (
     <div
       ref={containerRef}
@@ -466,7 +478,7 @@ function BoardCanvasInner({
         className="breadboard-flow"
         style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}
         nodes={snapshot.nodes}
-        edges={snapshot.edges}
+        edges={edgesWithFlow}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={readOnly ? undefined : handleNodesChange}

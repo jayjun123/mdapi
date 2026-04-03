@@ -49,6 +49,8 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
   const [promptPreviewLoading, setPromptPreviewLoading] = useState(false);
   const [promptPreviewError, setPromptPreviewError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  /** Run 시 실행 순서 시각화: 현재 칩에서 나가는 선만 점선 흐름 */
+  const [flowPulseFromChipId, setFlowPulseFromChipId] = useState<string | null>(null);
 
   const [chipConfigOpen, setChipConfigOpen] = useState(false);
   const [chipConfigChipId, setChipConfigChipId] = useState<string | null>(null);
@@ -83,14 +85,13 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
 
   const updateChip = useCallback(
     (nextChip: BoardChipInstance) => {
-      history.set((current) => {
-        const nextBoard = {
-          ...current,
-          chips: current.chips.map((c) => (c.id === nextChip.id ? nextChip : c)),
-        };
-        library.updateActiveBoard(nextBoard);
-        return nextBoard;
-      });
+      const current = history.present;
+      const nextBoard = {
+        ...current,
+        chips: current.chips.map((c) => (c.id === nextChip.id ? nextChip : c)),
+      };
+      history.set(nextBoard);
+      library.updateActiveBoard(nextBoard);
     },
     [history, library],
   );
@@ -101,14 +102,26 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
 
   const onRun = useCallback(async () => {
     setRunning(true);
+    setFlowPulseFromChipId(null);
     try {
-      const report = await executeBoard(board, { validateBeforeRun: true, continueOnError: false });
+      const report = await executeBoard(board, {
+        validateBeforeRun: true,
+        continueOnError: false,
+        onChipExecutionStart: async (chipId) => {
+          setFlowPulseFromChipId(chipId);
+          await new Promise((r) => setTimeout(r, 110));
+        },
+        onChipExecutionEnd: async () => {
+          setFlowPulseFromChipId(null);
+        },
+      });
       setExecutionReport(report);
       if (report.validation) setValidationReport(report.validation);
       history.set(report.board, { skipIfEqual: false });
       library.updateActiveBoard(report.board);
     } finally {
       setRunning(false);
+      setFlowPulseFromChipId(null);
     }
   }, [board, history, library]);
 
@@ -294,14 +307,13 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
       if (chipIds.length === 0 && edgeIds.length === 0) return;
       const chipSet = new Set(chipIds);
       const edgeSet = new Set(edgeIds);
-      history.set((current) => {
-        let chips = current.chips.filter((c) => !chipSet.has(c.id));
-        let edges = current.edges.filter((e) => !chipSet.has(e.fromChipId) && !chipSet.has(e.toChipId));
-        edges = edges.filter((e) => !edgeSet.has(e.id));
-        const next: BoardState = { ...current, chips, edges };
-        library.updateActiveBoard(next);
-        return next;
-      });
+      const current = history.present;
+      let chips = current.chips.filter((c) => !chipSet.has(c.id));
+      let edges = current.edges.filter((e) => !chipSet.has(e.fromChipId) && !chipSet.has(e.toChipId));
+      edges = edges.filter((e) => !edgeSet.has(e.id));
+      const next: BoardState = { ...current, chips, edges };
+      history.set(next);
+      library.updateActiveBoard(next);
       if (chipConfigChipId && chipSet.has(chipConfigChipId)) {
         setChipConfigOpen(false);
         setChipConfigChipId(null);
@@ -355,6 +367,7 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
         <div className="relative min-h-0 min-w-0 p-3 pb-2">
           <BoardCanvas
             board={board}
+            flowPulseFromChipId={flowPulseFromChipId}
             onBoardChange={onBoardChange}
             onValidationChange={onValidationChange}
             onSelectionChange={setSelection}

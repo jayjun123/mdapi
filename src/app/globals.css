@@ -202,3 +202,21 @@
   background: rgba(251, 191, 36, 0.14);
   border: 1px solid rgba(251, 191, 36, 0.42);
 }
+
+/**
+ * 짧은 밝은 구간 + 긴 간격 → 선 위로 “빛 한 덩어리”가 이동하는 느낌 (점선 패턴 아님)
+ * stroke-dasharray / offset 주기: 36 + 1800 = 1836
+ */
+.breadboard-edge-pulse-path {
+  stroke-dasharray: 36 1800;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: breadboard-edge-pulse-travel 40s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes breadboard-edge-pulse-travel {
+  to {
+    stroke-dashoffset: -1836;
+  }
+}
