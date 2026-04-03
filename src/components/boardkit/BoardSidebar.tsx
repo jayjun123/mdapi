@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import { chipCategories, chipDefinitions, type ChipCategory } from "@/core/board/chipDefinitions";
-import { BOARD_LIBRARY_STORAGE_KEY } from "@/hooks/useBoardLibrary";
 import { cn } from "@/lib/utils";
 
 export const BOARD_SIDEBAR_DRAG_MIME = "application/x-breadboard-chip-type";
@@ -44,6 +43,15 @@ export type BoardSidebarControlsProps = BoardSidebarSharedProps & {
   embedded?: boolean;
   /** 처음에 버튼 영역까지 펼쳐 둠 (기본 false = 제목만) */
   defaultExpanded?: boolean;
+};
+
+export type BoardSidebarNaturalLanguageProps = BoardSidebarSharedProps & {
+  compact?: boolean;
+  embedded?: boolean;
+  defaultExpanded?: boolean;
+  text: string;
+  onTextChange: (value: string) => void;
+  onApply: () => void;
 };
 
 export type BoardSidebarPaletteProps = BoardSidebarSharedProps & {
@@ -191,10 +199,10 @@ export function BoardSidebarControls({
               fontSize: compact ? 12 : 17,
               fontWeight: 800,
               color: "#f8fafc",
-              letterSpacing: "-0.02em",
+              letterSpacing: "0.04em",
             }}
           >
-            보드 컨트롤
+            BOARD CONTROLS
           </span>
           <ChevronDown
             className={cn("size-4 shrink-0 text-zinc-400 transition-transform duration-200", controlsOpen && "rotate-180")}
@@ -304,20 +312,90 @@ export function BoardSidebarControls({
           </div>
         ) : null}
       </section>
+    </aside>
+  );
+}
 
-      <p
-        style={{
-          margin: 0,
-          paddingTop: compact ? 6 : 10,
-          color: "#64748b",
-          fontSize: compact ? 10 : 12,
-          lineHeight: 1.45,
-        }}
-      >
-        <strong style={{ color: "#94a3b8" }}>저장 위치:</strong> 이 브라우저만의{" "}
-        <span style={{ color: "#a1a1aa" }}>localStorage</span> ({BOARD_LIBRARY_STORAGE_KEY}). 다른 기기·브라우저와
-        자동 동기화되지 않습니다. 백업은 JSON 저장/복사를 이용하세요.
-      </p>
+export function BoardSidebarNaturalLanguage({
+  compact = false,
+  embedded = false,
+  defaultExpanded = true,
+  text,
+  onTextChange,
+  onApply,
+}: BoardSidebarNaturalLanguageProps) {
+  const [open, setOpen] = useState(defaultExpanded);
+
+  return (
+    <aside
+      style={{
+        borderRadius: embedded ? 0 : compact ? 12 : 18,
+        padding: embedded ? 0 : compact ? 8 : 14,
+        background: embedded ? "transparent" : "rgba(15,23,42,0.92)",
+        border: embedded ? "none" : "1px solid rgba(148,163,184,0.22)",
+        boxShadow: embedded ? "none" : "0 14px 34px rgba(2,8,23,0.22)",
+        display: "grid",
+        gap: compact ? 8 : 14,
+        height: "auto",
+        minHeight: 0,
+        width: "100%",
+        overflowY: embedded ? "visible" : "auto",
+        overflowX: "hidden",
+        boxSizing: "border-box",
+      }}
+    >
+      <section style={{ minHeight: 0, display: "grid", gap: compact ? 6 : 8 }}>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 rounded-lg border border-zinc-600/60 bg-zinc-900/80 px-3 py-2.5 text-left transition-colors hover:bg-zinc-800/90"
+          aria-expanded={open}
+          aria-controls="board-nl-actions"
+        >
+          <span
+            style={{
+              fontSize: compact ? 12 : 17,
+              fontWeight: 800,
+              color: "#f8fafc",
+              letterSpacing: "0.04em",
+            }}
+          >
+            TEXT TO BOARD
+          </span>
+          <ChevronDown
+            className={cn("size-4 shrink-0 text-zinc-400 transition-transform duration-200", open && "rotate-180")}
+            aria-hidden
+          />
+        </button>
+
+        {open ? (
+          <div id="board-nl-actions" style={{ display: "grid", gap: compact ? 6 : 8 }}>
+            <p style={{ margin: 0, fontSize: compact ? 10 : 12, lineHeight: 1.45, color: "#94a3b8" }}>
+              예: 신데렐라 책을 아이들이 좋아할 만한 그림으로 요약해 줘 — 키워드에 맞춰 칩을 골라 오른쪽에 이어 붙입니다. 이후 드래그·추가·삭제는 직접
+              하시면 됩니다.
+            </p>
+            <textarea
+              value={text}
+              onChange={(event) => onTextChange(event.target.value)}
+              placeholder="하고 싶은 일을 평소 말하듯 적어 보세요…"
+              style={{
+                width: "100%",
+                minHeight: compact ? 56 : 88,
+                resize: "vertical",
+                borderRadius: compact ? 8 : 12,
+                padding: compact ? 6 : 12,
+                background: "#020617",
+                color: "#e2e8f0",
+                border: "1px solid rgba(148,163,184,0.22)",
+                boxSizing: "border-box",
+                fontSize: compact ? 11 : 14,
+                lineHeight: 1.4,
+              }}
+            />
+            <ToolbarButton compact={compact} label="보드에 배치" onClick={onApply} background="#9a3412" />
+          </div>
+        ) : null}
+      </section>
     </aside>
   );
 }
@@ -414,7 +492,17 @@ export function BoardSidebarPalette(props: BoardSidebarPaletteProps) {
       }}
     >
       <section style={{ minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ fontSize: compact ? 12 : 16, fontWeight: 800, color: "#f8fafc", marginBottom: 4 }}>칩 팔레트</div>
+        <div
+          style={{
+            fontSize: compact ? 12 : 16,
+            fontWeight: 800,
+            color: "#f8fafc",
+            marginBottom: 4,
+            letterSpacing: "0.04em",
+          }}
+        >
+          CHIP PALETTE
+        </div>
         {!compact ? (
           <div style={{ color: "#94a3b8", fontSize: 15, marginBottom: 10 }}>드래그하여 캔버스에 놓기</div>
         ) : null}

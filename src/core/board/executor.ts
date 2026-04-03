@@ -209,6 +209,38 @@ function applyErrorToRuntime(chip: BoardChipInstance, errorMessage: string): voi
   chip.runtime.lastRunAt = Date.now();
 }
 
+function mockAiProviderExecutor(positioningLine: string): ChipExecutor {
+  return ({ chip, inputs }) => {
+    const prompt = normalizeText(inputs.prompt);
+    const context = inputs.context;
+    const answer = [
+      `### ${chip.config.label ?? chip.name}`,
+      '',
+      positioningLine,
+      '',
+      `프롬프트 일부: ${prompt.slice(0, 220)}`,
+      context ? '(문맥 JSON이 함께 전달된 것으로 가정합니다.)' : '',
+      '',
+      '실제 서비스 API를 여기에 연결하면 됩니다. 지금은 mock 실행입니다.',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    return {
+      outputs: {
+        answer,
+        structured: {
+          provider: chip.config.provider,
+          hasContext: Boolean(context),
+          promptLength: prompt.length,
+          mock: true,
+        },
+        needTool: /search|find|lookup|검색|찾아|최신|뉴스|perplexity|deep/i.test(prompt),
+      },
+    };
+  };
+}
+
 const chipExecutors: Record<string, ChipExecutor> = {
   text_input: ({ chip, options }) => {
     const direct = options.externalInputs?.[chip.id];
@@ -265,6 +297,28 @@ const chipExecutors: Record<string, ChipExecutor> = {
       },
     };
   },
+
+  ai_ollama: mockAiProviderExecutor(
+    '로컬 PC에서 오픈 모델을 돌리는 전제입니다. 민감한 데이터를 클라우드로 덜내려는 흐름에 맞춥니다.',
+  ),
+  ai_chatgpt: mockAiProviderExecutor(
+    '범용 챗·문서·분석까지 한곳에서 처리하는 스타일을 가정합니다. 프로젝트·파일 업로드 등은 별도 앱 기능으로 보시면 됩니다.',
+  ),
+  ai_claude: mockAiProviderExecutor(
+    '긴 글 정리·기획 문구·단계적 설명에 강한 스타일을 가정합니다. 문서 초안·아티팩트형 결과물 파이프라인에 붙이기 좋습니다.',
+  ),
+  ai_gemini: mockAiProviderExecutor(
+    '멀티모달·긴 컨텍스트·리서치형 질문을 염두에 둔 스타일입니다. 긴 자료·이미지 설명을 한꺼번에 다루는 흐름에 맞춥니다.',
+  ),
+  ai_copilot: mockAiProviderExecutor(
+    'Word·Excel·Outlook·Teams 같은 업무 앱과 맞물리는 “일용 AI”를 가정합니다. 조직 데이터·권한은 실제 제품에서 처리합니다.',
+  ),
+  ai_perplexity: mockAiProviderExecutor(
+    '웹을 검색해 출처가 달린 답을 주는 스타일을 가정합니다. 시장조사·팩트 확인용 1차 조사에 맞춥니다.',
+  ),
+  ai_grok: mockAiProviderExecutor(
+    '실시간 웹·최신 이슈 탐색에 초점을 둔 스타일을 가정합니다. 트렌드·뉴스형 질문에 맞춥니다.',
+  ),
 
   search_rag: ({ chip, inputs }) => {
     const query = normalizeText(inputs.query);

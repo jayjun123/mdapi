@@ -5,6 +5,7 @@ import { BoardCanvas } from "@/components/board/BoardCanvas";
 import {
   BoardSidebarPalette,
   BoardSidebarControls,
+  BoardSidebarNaturalLanguage,
   BoardSidebarSummary,
   BOARD_SIDEBAR_DRAG_MIME,
 } from "@/components/boardkit/BoardSidebar";
@@ -22,6 +23,7 @@ import { validateBoard } from "@/core/board/validation";
 import { executeBoard, type BoardExecutionReport } from "@/core/board/executor";
 import { initialBoard as defaultBoard } from "@/core/board/initialBoard";
 import { buildExecutablePromptMarkdown, safeBoardFileBase } from "@/core/board/buildExecutablePromptMd";
+import { appendNaturalLanguageFlow } from "@/core/board/nlBoardGenerator";
 import { cloneBoardSerializable, deserializeBoardFromJson, serializeBoardToJson } from "@/core/board/boardSerializer";
 import { useBoardHistory } from "@/hooks/useBoardHistory";
 import type { UseBoardLibraryResult } from "@/hooks/useBoardLibrary";
@@ -45,6 +47,7 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
   const [chipConfigOpen, setChipConfigOpen] = useState(false);
   const [chipConfigChipId, setChipConfigChipId] = useState<string | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [nlBoardText, setNlBoardText] = useState("");
 
   const selectedChip = useMemo(() => {
     if (!chipConfigChipId) return null;
@@ -208,6 +211,18 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
       window.alert(`자동 연결 ${added}개 추가. ${skippedPairs}개 구간은 호환 포트가 없어 건너뜀.`);
     }
   }, [board, history, library, selection.chipIds]);
+
+  const handleNlBoardApply = useCallback(() => {
+    const out = appendNaturalLanguageFlow(board, nlBoardText);
+    history.set(out.board);
+    library.updateActiveBoard(out.board);
+    setValidationReport(validateBoard(out.board));
+    setSelection({ chipIds: out.newChipIds, edgeIds: [] });
+    setExecutionReport(null);
+    if (typeof window !== "undefined") {
+      window.alert(out.message);
+    }
+  }, [board, history, library, nlBoardText]);
 
   const handleDisconnectSelection = useCallback(() => {
     const ids = selection.chipIds;
@@ -463,7 +478,16 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden bg-zinc-950 p-3">
-        <div className="max-h-[min(52vh,420px)] min-h-0 shrink-0 overflow-y-auto">
+        <div className="max-h-[min(30vh,300px)] min-h-0 shrink-0 overflow-y-auto">
+          <BoardSidebarNaturalLanguage
+            defaultExpanded
+            text={nlBoardText}
+            onTextChange={setNlBoardText}
+            onApply={handleNlBoardApply}
+            {...sidebarShared}
+          />
+        </div>
+        <div className="max-h-[min(48vh,400px)] min-h-0 shrink-0 overflow-y-auto">
           <BoardSidebarControls
             defaultExpanded
             onValidate={onValidate}

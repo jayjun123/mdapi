@@ -1,5 +1,5 @@
 import { serializeBoardToJson } from './boardSerializer';
-import { describeBoardFlowNarrative } from './describeBoardFlow';
+import { describeBoardFlowAndCapability } from './describeBoardFlow';
 import type { BoardState } from './boardTypes';
 import { validateBoard } from './validation';
 
@@ -7,7 +7,7 @@ import { validateBoard } from './validation';
  * 보드 상태를 다른 AI에게 전달해 실행 가능한 프로그램(스크립트·API·CLI 등)을 만들게 할 때 쓰는 마크다운 프롬프트를 만듭니다.
  */
 export function buildExecutablePromptMarkdown(board: BoardState): string {
-  const narrative = describeBoardFlowNarrative(board);
+  const { flow: narrative, capability } = describeBoardFlowAndCapability(board);
   const validation = validateBoard(board);
   const json = serializeBoardToJson(board, true);
 
@@ -45,6 +45,10 @@ export function buildExecutablePromptMarkdown(board: BoardState): string {
 ## 흐름 설명 (사람이 읽기 쉬운 요약)
 
 ${narrative}
+
+### 이 구조로 할 수 있는 일
+
+${capability}
 
 ---
 
