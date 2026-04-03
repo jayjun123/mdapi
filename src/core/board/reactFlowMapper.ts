@@ -55,7 +55,37 @@ export type ReactFlowBoardEdgeData = {
   validationLevel: ValidationLevel | undefined;
   label?: string;
   metadata?: Record<string, unknown>;
+  /** 같은 출발 칩에서 나가는 선들을 구분하는 팔레트 색(검증 레벨으로 덮어쓴 stroke와 별개로 보관) */
+  sourceFanColor?: string;
+  sourceFanIndex?: number;
 };
+
+/** 같은 칩에서 나가는 연결선 순서: 초록 → 주황 → 보라 → 파랑 → 빨강 → 갈색 (순환) */
+export const SOURCE_FAN_OUT_COLORS = ['#22c55e', '#ea580c', '#a855f7', '#2563eb', '#dc2626', '#92400e'] as const;
+
+export function assignSourceFanOutIndexByEdgeId(edges: BoardEdge[]): Map<string, number> {
+  const bySource = new Map<string, BoardEdge[]>();
+  for (const e of edges) {
+    const list = bySource.get(e.fromChipId) ?? [];
+    list.push(e);
+    bySource.set(e.fromChipId, list);
+  }
+  const map = new Map<string, number>();
+  for (const [, list] of bySource) {
+    list.sort((a, b) => a.id.localeCompare(b.id));
+    list.forEach((edge, i) => map.set(edge.id, i));
+  }
+  return map;
+}
+
+function resolveEdgeStrokeColor(edge: BoardEdge, fanBase: string): string {
+  const level = edge.validationLevel;
+  if (level === 'deny') return '#ef4444';
+  if (level === 'warn') return '#eab308';
+  if (level === 'adapter') return '#f97316';
+  if (level === 'allow') return fanBase;
+  return edge.kind === 'event' ? '#d97706' : fanBase;
+}
 
 export type ReactFlowBoardSnapshot = {
   nodes: Array<Node<ReactFlowChipNodeData>>;
@@ -162,8 +192,13 @@ export function boardChipToReactFlowNode(chip: BoardChipInstance): Node<ReactFlo
   };
 }
 
-export function boardEdgeToReactFlowEdge(edge: BoardEdge): Edge<ReactFlowBoardEdgeData> {
-  const stroke = validationLevelToStroke(edge.validationLevel, edge.kind);
+export function boardEdgeToReactFlowEdge(
+  edge: BoardEdge,
+  fanIndexByEdgeId?: Map<string, number>
+): Edge<ReactFlowBoardEdgeData> {
+  const fanIndex = fanIndexByEdgeId?.get(edge.id) ?? 0;
+  const fanBase = SOURCE_FAN_OUT_COLORS[fanIndex % SOURCE_FAN_OUT_COLORS.length];
+  const stroke = resolveEdgeStrokeColor(edge, fanBase);
 
   return {
     id: edge.id,
@@ -192,14 +227,17 @@ export function boardEdgeToReactFlowEdge(edge: BoardEdge): Edge<ReactFlowBoardEd
       validationLevel: edge.validationLevel,
       label: edge.label,
       metadata: edge.metadata,
+      sourceFanColor: fanBase,
+      sourceFanIndex: fanIndex,
     },
   };
 }
 
 export function boardToReactFlow(board: BoardState): ReactFlowBoardSnapshot {
+  const fanIndexByEdgeId = assignSourceFanOutIndexByEdgeId(board.edges);
   return {
     nodes: board.chips.map(boardChipToReactFlowNode),
-    edges: board.edges.map(boardEdgeToReactFlowEdge),
+    edges: board.edges.map((e) => boardEdgeToReactFlowEdge(e, fanIndexByEdgeId)),
   };
 }
 
@@ -390,8 +428,10 @@ export function createEdgePreview(board: BoardState, connection: Connection): Ed
   edge.validationLevel = preview.result.level;
   edge.label = preview.label;
 
+  const fanIndexByEdgeId = assignSourceFanOutIndexByEdgeId([...board.edges, edge]);
+
   return {
-    edge: boardEdgeToReactFlowEdge(edge),
+    edge: boardEdgeToReactFlowEdge(edge, fanIndexByEdgeId),
     valid: preview.result.level === 'allow' || preview.result.level === 'warn',
     color: preview.color,
     label: preview.label,

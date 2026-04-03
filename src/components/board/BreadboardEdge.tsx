@@ -42,15 +42,12 @@ function BreadboardEdgeComponent(props: EdgeProps<ReactFlowBoardEdgeData>) {
   } = props;
 
   const kind = data?.kind ?? "data";
-  const accent = kind === "event" ? "#ca8a04" : "#ea580c";
+  /** reactFlowMapper에서 출발 칩별 팔레트·검증 색이 style.stroke로 전달됨 */
+  const strokeFromMapper = typeof style?.stroke === "string" ? style.stroke : null;
   const stroke =
-    kind === "event"
-      ? selected
-        ? "#a16207"
-        : "#d97706"
-      : selected
-        ? "#9a3412"
-        : "#ea580c";
+    strokeFromMapper ??
+    (kind === "event" ? "#d97706" : "#ea580c");
+  const accent = stroke;
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
@@ -78,7 +75,7 @@ function BreadboardEdgeComponent(props: EdgeProps<ReactFlowBoardEdgeData>) {
           strokeLinecap: "round",
           strokeLinejoin: "round",
           strokeWidth: selected ? 3.25 : (style?.strokeWidth as number) ?? 2.25,
-          filter: selected ? "drop-shadow(0 0 3px rgba(234, 88, 12, 0.45))" : undefined,
+          filter: selected ? `drop-shadow(0 0 4px ${stroke}88)` : undefined,
         }}
         markerEnd={markerEnd}
       />
