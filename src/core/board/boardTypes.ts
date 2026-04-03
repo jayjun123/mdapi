@@ -124,10 +124,10 @@ export type PortLookup = {
 };
 
 export const CHIP_SIZE_DIMENSIONS: Record<ChipSize, { width: number; height: number }> = {
-  S: { width: 96, height: 64 },
-  M: { width: 128, height: 80 },
-  L: { width: 160, height: 96 },
-  XL: { width: 192, height: 112 },
+  S: { width: 96, height: 72 },
+  M: { width: 128, height: 118 },
+  L: { width: 160, height: 132 },
+  XL: { width: 192, height: 152 },
 };
 
 export function getChipById(board: BoardState, chipId: string): BoardChipInstance | undefined {

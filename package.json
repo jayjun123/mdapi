@@ -2,10 +2,15 @@
   "name": "breadboard-ai-builder",
   "version": "0.1.0",
   "private": true,
+  "description": "Visual breadboard AI flow editor (Next.js + Electron)",
+  "author": "Breadboard AI Builder",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "electron:dev": "npm run build && electron .",
+    "electron:pack": "npm run build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win",
     "cap:sync": "npm run build & npx cap sync",
     "cap:open:android": "npx cap open android",
     "cap:open:ios": "npx cap open ios",
@@ -29,7 +34,8 @@
     "tailwind-merge": "^3.5.0",
     "tw-animate-css": "^1.4.0",
     "zod": "^4.3.6",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.12",
+    "serve-handler": "^6.1.6"
   },
   "devDependencies": {
     "@capacitor/android": "^8.3.0",
@@ -42,6 +48,42 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12",
+    "cross-env": "^7.0.3"
+  },
+  "build": {
+    "appId": "com.breadboard.aibuilder",
+    "productName": "BreadboardAIBuilder",
+    "forceCodeSigning": false,
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        },
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Breadboard AI Builder",
+      "uninstallDisplayName": "Breadboard AI Builder"
+    }
   }
 }

@@ -10,18 +10,18 @@ function labelPill(text: string, accent: string) {
       style={{
         pointerEvents: "none",
         padding: "2px 7px",
-        borderRadius: 6,
+        borderRadius: 4,
         fontSize: 10,
         fontWeight: 800,
         letterSpacing: 0.02,
-        background: "rgba(15,23,42,0.92)",
+        background: "rgba(40, 40, 48, 0.94)",
         border: `1px solid ${accent}55`,
-        color: accent,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+        color: "#e4e4e7",
+        boxShadow: "0 1px 6px rgba(0, 0, 0, 0.35)",
         whiteSpace: "nowrap",
       }}
     >
-      {text}
+      <span style={{ color: accent }}>{text}</span>
     </div>
   );
 }
@@ -42,7 +42,15 @@ function BreadboardEdgeComponent(props: EdgeProps<ReactFlowBoardEdgeData>) {
   } = props;
 
   const kind = data?.kind ?? "data";
-  const accent = kind === "event" ? "#fbbf24" : "#4ade80";
+  const accent = kind === "event" ? "#ca8a04" : "#ea580c";
+  const stroke =
+    kind === "event"
+      ? selected
+        ? "#a16207"
+        : "#d97706"
+      : selected
+        ? "#9a3412"
+        : "#ea580c";
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
@@ -66,7 +74,11 @@ function BreadboardEdgeComponent(props: EdgeProps<ReactFlowBoardEdgeData>) {
         path={edgePath}
         style={{
           ...style,
-          strokeWidth: selected ? 3 : (style?.strokeWidth as number) ?? 2,
+          stroke,
+          strokeLinecap: "round",
+          strokeLinejoin: "round",
+          strokeWidth: selected ? 3.25 : (style?.strokeWidth as number) ?? 2.25,
+          filter: selected ? "drop-shadow(0 0 3px rgba(234, 88, 12, 0.45))" : undefined,
         }}
         markerEnd={markerEnd}
       />

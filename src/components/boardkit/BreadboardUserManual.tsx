@@ -125,8 +125,10 @@ export function BreadboardManualContent() {
             <strong className="text-zinc-100">인터넷 없이</strong>도 배치할 수 있습니다.
           </li>
           <li>
-            <strong className="text-zinc-100">보드 컨트롤</strong>에서 보드를 바꾸고, 이름을 고치고, 새 보드·삭제·JSON 저장/불러오기를 할 수 있습니다.
-            여러 보드는 브라우저 저장소에 자동 저장됩니다.
+            <strong className="text-zinc-100">보드 컨트롤</strong>에서 보드를 바꾸고, 이름을 고치고, 새 보드·삭제·JSON 저장/불러오기를 할 수 있습니다.{" "}
+            <strong className="text-zinc-100">미리보기</strong>는 AI용 마크다운(실행·검증·골든 결과 포함)을 창에서 확인·복사할 수 있고,{" "}
+            <strong className="text-zinc-100">결과값 도출</strong>은 같은 내용을 바로 .md 파일로 저장합니다. 여러 보드는 브라우저 저장소에 자동
+            저장됩니다.
           </li>
         </ul>
       </Section>

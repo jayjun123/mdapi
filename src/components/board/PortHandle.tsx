@@ -11,6 +11,42 @@ export type PortHandleProps = {
   showDescription?: boolean;
 };
 
+function pinLegStyle(placement: ReactFlowChipPortData['placement']): React.CSSProperties {
+  const metal =
+    'linear-gradient(90deg, #52525e 0%, #a1a1aa 38%, #f4f4f5 50%, #9ca3af 62%, #3f3f46 100%)';
+  switch (placement) {
+    case 'top':
+      return {
+        width: 16,
+        height: 5,
+        background: metal,
+        borderRadius: 1,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.35)',
+        flexShrink: 0,
+      };
+    case 'bottom':
+      return {
+        width: 16,
+        height: 5,
+        background: metal,
+        borderRadius: 1,
+        boxShadow: '0 1px 2px rgba(0,0,0,0.35)',
+        flexShrink: 0,
+      };
+    case 'right':
+    case 'left':
+    default:
+      return {
+        width: 5,
+        height: 16,
+        background: metal,
+        borderRadius: 1,
+        boxShadow: '1px 0 2px rgba(0,0,0,0.3)',
+        flexShrink: 0,
+      };
+  }
+}
+
 function getPlacementStyle(placement: ReactFlowChipPortData['placement']): React.CSSProperties {
   switch (placement) {
     case 'top':
@@ -124,7 +160,7 @@ function PortHandleComponent({
       style={{
         position: 'absolute',
         display: 'flex',
-        gap: 6,
+        gap: 5,
         pointerEvents: 'none',
         zIndex: 3,
         ...placementStyle,
@@ -135,46 +171,64 @@ function PortHandleComponent({
           pointerEvents: 'auto',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: compact ? 4 : 6,
-          padding: compact ? '2px 6px' : '4px 8px',
-          borderRadius: 999,
-          border: `1px solid ${color}55`,
-          background: disabled ? 'rgba(90, 98, 115, 0.72)' : 'rgba(18, 24, 38, 0.92)',
-          boxShadow: `0 0 0 1px ${color}18, 0 6px 18px rgba(0,0,0,0.24)`,
-          opacity: disabled ? 0.55 : 1,
-          minHeight: 22,
+          flexDirection:
+            port.placement === 'top'
+              ? 'column'
+              : port.placement === 'bottom'
+                ? 'column-reverse'
+                : port.placement === 'right'
+                  ? 'row-reverse'
+                  : 'row',
+          gap: compact ? 3 : 5,
         }}
       >
-        <span style={shapeStyle} />
-        {!compact && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, lineHeight: 1.1 }}>
-            <span style={{ color: '#f8fafc', fontSize: 13, fontWeight: 700 }}>{port.name}</span>
-            <span style={{ color: color, fontSize: 12, fontWeight: 600 }}>{typeLabel}</span>
-            {showDescription && port.description ? (
-              <span style={{ color: '#94a3b8', fontSize: 9 }}>{port.description}</span>
-            ) : null}
-          </div>
-        )}
-        {compact && <span style={{ color: '#f8fafc', fontSize: 12, fontWeight: 700 }}>{port.type}</span>}
-        {typeof connectionCount === 'number' ? (
-          <span
-            style={{
-              marginLeft: 2,
-              minWidth: 14,
-              height: 14,
-              padding: '0 4px',
-              borderRadius: 999,
-              background: 'rgba(255,255,255,0.12)',
-              color: '#cbd5e1',
-              fontSize: 11,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {connectionCount}
-          </span>
-        ) : null}
+        {port.placement === 'left' ? <div style={pinLegStyle(port.placement)} aria-hidden /> : null}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: compact ? 4 : 6,
+            padding: compact ? '2px 6px' : '4px 8px',
+            borderRadius: compact ? 4 : 5,
+            border: `1px solid ${disabled ? '#57534e' : `${color}66`}`,
+            background: disabled ? 'rgba(68, 64, 60, 0.85)' : 'linear-gradient(180deg, #292524 0%, #1c1917 100%)',
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 6px rgba(0,0,0,0.35)`,
+            opacity: disabled ? 0.55 : 1,
+            minHeight: 22,
+          }}
+        >
+          <span style={shapeStyle} />
+          {!compact && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, lineHeight: 1.1 }}>
+              <span style={{ color: '#e7e5e4', fontSize: 12, fontWeight: 700 }}>{port.name}</span>
+              <span style={{ color: color, fontSize: 11, fontWeight: 600 }}>{typeLabel}</span>
+              {showDescription && port.description ? (
+                <span style={{ color: '#a8a29e', fontSize: 9 }}>{port.description}</span>
+              ) : null}
+            </div>
+          )}
+          {compact && <span style={{ color: '#e7e5e4', fontSize: 11, fontWeight: 700 }}>{port.type}</span>}
+          {typeof connectionCount === 'number' ? (
+            <span
+              style={{
+                marginLeft: 2,
+                minWidth: 14,
+                height: 14,
+                padding: '0 4px',
+                borderRadius: 999,
+                background: 'rgba(255,255,255,0.08)',
+                color: '#d6d3d1',
+                fontSize: 11,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {connectionCount}
+            </span>
+          ) : null}
+        </div>
+        {port.placement === 'right' ? <div style={pinLegStyle(port.placement)} aria-hidden /> : null}
       </div>
 
       <Handle

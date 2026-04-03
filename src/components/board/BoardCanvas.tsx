@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
 import {
   Background,
+  BackgroundVariant,
   ConnectionMode,
   Controls,
   MiniMap,
@@ -433,7 +434,7 @@ function BoardCanvasInner({
   return (
     <div
       ref={containerRef}
-      className={className}
+      className={['breadboard-canvas', className].filter(Boolean).join(' ')}
       style={{
         width: '100%',
         height: '100%',
@@ -441,15 +442,29 @@ function BoardCanvasInner({
         borderRadius: 12,
         overflow: 'hidden',
         position: 'relative',
-        background: 'linear-gradient(180deg, #0f172a 0%, #111827 100%)',
-        border: '1px solid rgba(148,163,184,0.18)',
-        boxShadow: '0 18px 50px rgba(2, 8, 23, 0.28)',
+        background: 'linear-gradient(180deg, #505058 0%, #45454e 42%, #3c3c45 100%)',
+        border: '1px solid rgba(0,0,0,0.18)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 32px rgba(0,0,0,0.22)',
         ...style,
       }}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
+      <div
+        aria-hidden
+        style={{
+          pointerEvents: 'none',
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 35%), linear-gradient(0deg, rgba(0,0,0,0.06) 0%, transparent 40%)',
+          borderRadius: 12,
+        }}
+      />
       <ReactFlow
+        className="breadboard-flow"
+        style={{ position: 'relative', zIndex: 1, width: '100%', height: '100%' }}
         nodes={snapshot.nodes}
         edges={snapshot.edges}
         nodeTypes={nodeTypes}
@@ -486,11 +501,11 @@ function BoardCanvasInner({
         defaultEdgeOptions={{
           type: BOARD_EDGE_TYPE,
           animated: false,
-          style: { strokeWidth: 2 },
+          style: { strokeWidth: 2.25, stroke: '#c2410c' },
         }}
         proOptions={{ hideAttribution: true }}
       >
-        <Background gap={16} size={1.2} color="rgba(148,163,184,0.18)" />
+        <Background variant={BackgroundVariant.Dots} gap={14} size={1.2} color="rgba(0, 0, 0, 0.11)" />
         {showControls ? <Controls showInteractive={!readOnly} position="bottom-right" /> : null}
         {showMiniMap ? (
           <MiniMap
@@ -498,8 +513,12 @@ function BoardCanvasInner({
             pannable
             zoomable
             style={{
-              background: 'rgba(15,23,42,0.92)',
-              border: '1px solid rgba(148,163,184,0.2)',
+              background: 'rgba(50, 50, 58, 0.96)',
+              border: '1px solid rgba(0, 0, 0, 0.22)',
+              width: 160,
+              height: 120,
+              borderRadius: 8,
+              overflow: 'hidden',
             }}
             nodeColor={(node) => {
               const category = (node as unknown as { data?: { category?: string } }).data?.category;
@@ -518,11 +537,11 @@ function BoardCanvasInner({
             <div
               style={{
                 padding: '12px 14px',
-                borderRadius: 16,
-                background: 'rgba(15,23,42,0.86)',
-                border: '1px solid rgba(148,163,184,0.18)',
-                boxShadow: '0 10px 24px rgba(0,0,0,0.22)',
-                color: '#e2e8f0',
+                borderRadius: 14,
+                background: 'rgba(36, 36, 42, 0.92)',
+                border: '1px solid rgba(0, 0, 0, 0.22)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
+                color: '#e4e4e7',
                 minWidth: 260,
               }}
             >
@@ -552,11 +571,11 @@ function BoardCanvasInner({
                         style={{
                           width: '100%',
                           boxSizing: 'border-box',
-                          color: '#f8fafc',
+                          color: '#fafafa',
                           fontSize: 17,
                           fontWeight: 800,
-                          background: 'rgba(2,6,23,0.55)',
-                          border: '1px solid rgba(148,163,184,0.25)',
+                          background: 'rgba(15, 15, 18, 0.65)',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
                           borderRadius: 10,
                           padding: '8px 10px',
                           outline: 'none',
@@ -564,9 +583,9 @@ function BoardCanvasInner({
                       />
                     </>
                   ) : (
-                    <div style={{ color: '#f8fafc', fontSize: 17, fontWeight: 800 }}>{board.name}</div>
+                    <div style={{ color: '#fafafa', fontSize: 17, fontWeight: 800 }}>{board.name}</div>
                   )}
-                  <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 6 }}>
+                  <div style={{ color: '#a1a1aa', fontSize: 13, marginTop: 6 }}>
                     칩 {board.chips.length}개 · 연결 {board.edges.length}개
                   </div>
                 </div>
@@ -598,13 +617,13 @@ function BoardCanvasInner({
             <div
               style={{
                 padding: '12px 14px',
-                borderRadius: 16,
-                background: 'rgba(15,23,42,0.9)',
+                borderRadius: 14,
+                background: 'rgba(36, 36, 42, 0.92)',
                 border: validationReport.ok
-                  ? '1px solid rgba(34,197,94,0.3)'
-                  : '1px solid rgba(239,68,68,0.3)',
-                boxShadow: '0 10px 24px rgba(0,0,0,0.22)',
-                color: '#e2e8f0',
+                  ? '1px solid rgba(34, 197, 94, 0.45)'
+                  : '1px solid rgba(239, 68, 68, 0.5)',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.28)',
+                color: '#e4e4e7',
                 minWidth: 280,
               }}
             >
@@ -650,7 +669,7 @@ function BoardCanvasInner({
 
               <div style={{ display: 'grid', gap: 6 }}>
                 {validationSummary.map((line) => (
-                  <div key={line} style={{ color: '#cbd5e1', fontSize: 13 }}>
+                  <div key={line} style={{ color: '#d4d4d8', fontSize: 13 }}>
                     • {line}
                   </div>
                 ))}

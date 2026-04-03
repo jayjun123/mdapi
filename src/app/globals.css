@@ -157,3 +157,48 @@
     clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
   }
 }
+
+/* ── 보드 캔버스 (중간 톤 회색 판 — 칩·선과 대비, Electron / 웹 공통) ── */
+.breadboard-canvas {
+  --bb-pane: #45454e;
+  --bb-pane-deep: #3a3a42;
+  --bb-dot: rgba(0, 0, 0, 0.12);
+}
+
+.breadboard-flow .react-flow__renderer {
+  background-color: transparent;
+}
+
+.breadboard-flow .react-flow__background {
+  background-color: var(--bb-pane) !important;
+}
+
+.breadboard-flow .react-flow__controls {
+  background: rgba(48, 48, 54, 0.94) !important;
+  border: 1px solid rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28) !important;
+}
+
+.breadboard-flow .react-flow__controls-button {
+  background: rgba(58, 58, 66, 0.9) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.15) !important;
+  fill: #e4e4e7 !important;
+}
+
+.breadboard-flow .react-flow__controls-button:hover {
+  background: rgba(72, 72, 82, 0.95) !important;
+}
+
+.breadboard-flow .react-flow__minimap {
+  background: rgba(50, 50, 58, 0.96) !important;
+  border: 1px solid rgba(0, 0, 0, 0.22) !important;
+  width: 160px !important;
+  height: 120px !important;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.breadboard-flow .react-flow__selection {
+  background: rgba(251, 191, 36, 0.14);
+  border: 1px solid rgba(251, 191, 36, 0.42);
+}

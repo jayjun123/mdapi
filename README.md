@@ -21,6 +21,31 @@ npm run dev
 
 ---
 
+## Windows 데스크톱 (.exe, Electron)
+
+정적 `out/`을 내장한 Electron 앱으로 패키징합니다.
+
+```bash
+npm run electron:pack
+```
+
+- **포터블 실행 파일**: `dist-electron/BreadboardAIBuilder 0.1.0.exe` (설치 없이 실행)
+- **설치형**: `dist-electron/BreadboardAIBuilder Setup 0.1.0.exe`
+- **압축 해제만**: `dist-electron/win-unpacked/BreadboardAIBuilder.exe`
+
+로컬에서 창만 띄워 보려면: `npm run electron:dev`
+
+> 코드 서명이 없는 환경에서는 `CSC_IDENTITY_AUTO_DISCOVERY=false`로 서명 단계를 건너뜁니다(`electron:pack`에 이미 포함).
+
+### UI는 어디까지 들어가나요?
+
+- **앱 안 화면**(캔버스·패널·모달 등): 전부 **웹 UI(React)** 그대로 exe에 포함됩니다. 브라우저에서 보던 것과 동일한 레이아웃·스타일입니다.
+- **창·작업 표시줄**: `electron/main.cjs`에서 다크 배경색, 메뉴바 자동 숨김, 시스템 다크 테마 선호 등을 적용해 두었습니다.
+- **아이콘·설치 마법사 이미지**: `build/icon.ico`(또는 `icon.png`)와 NSIS 옵션으로 넣을 수 있습니다. 안내는 `build/README.txt` 참고.
+- **브라우저 탭 파비콘**: Next에서 `src/app/icon.png` 등을 추가하면 웹·정적 호스트에서 탭 아이콘이 바뀝니다.
+
+---
+
 ## 사용 방법(기본 흐름)
 
 ### 1) 칩 추가

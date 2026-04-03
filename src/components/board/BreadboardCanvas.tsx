@@ -119,7 +119,13 @@ function BreadboardCanvasInner() {
           position="bottom-right"
           nodeColor={() => "rgba(120,180,220,0.65)"}
           maskColor="rgba(0,0,0,0.35)"
-          style={{ background: "rgba(0,0,0,0.25)" }}
+          style={{
+            background: "rgba(0,0,0,0.25)",
+            width: 160,
+            height: 120,
+            borderRadius: 8,
+            overflow: "hidden",
+          }}
         />
       </ReactFlow>
     </div>

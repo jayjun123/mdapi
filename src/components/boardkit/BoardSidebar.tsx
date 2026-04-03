@@ -33,6 +33,8 @@ export type BoardSidebarControlsProps = BoardSidebarSharedProps & {
   onDownloadJson?: () => void;
   /** 실행 프로그램 구현용 마크다운 프롬프트 파일 저장 */
   onExportBuildPromptMd?: () => void | Promise<void>;
+  /** 동일 프롬프트를 모달에서 미리보기(복사·저장 가능) */
+  onPreviewBuildPromptMd?: () => void | Promise<void>;
   onImportJson?: (json: string) => void;
   isRunning?: boolean;
   /** 보드 목록·이름 변경·삭제(로컬 저장) */
@@ -126,6 +128,7 @@ export function BoardSidebarControls({
   onCopyJson,
   onDownloadJson,
   onExportBuildPromptMd,
+  onPreviewBuildPromptMd,
   onImportJson,
   isRunning = false,
   boardLibrary,
@@ -266,11 +269,32 @@ export function BoardSidebarControls({
               </button>
               <button
                 type="button"
+                onClick={() => void onPreviewBuildPromptMd?.()}
+                disabled={!onPreviewBuildPromptMd}
+                style={{
+                  marginTop: 0,
+                  width: "100%",
+                  border: "none",
+                  borderRadius: compact ? 8 : 12,
+                  padding: compact ? "6px 8px" : "10px 12px",
+                  background: onPreviewBuildPromptMd ? "#4f46e5" : "#475569",
+                  color: "#fff",
+                  fontWeight: 800,
+                  fontSize: compact ? 11 : 13,
+                  cursor: onPreviewBuildPromptMd ? "pointer" : "not-allowed",
+                  lineHeight: 1.25,
+                }}
+              >
+                미리보기
+              </button>
+              <button
+                type="button"
                 onClick={() => void onExportBuildPromptMd?.()}
                 disabled={!onExportBuildPromptMd}
                 style={{
                   marginTop: 0,
                   width: "100%",
+                  gridColumn: "1 / -1",
                   border: "none",
                   borderRadius: compact ? 8 : 12,
                   padding: compact ? "6px 8px" : "10px 12px",
@@ -282,7 +306,7 @@ export function BoardSidebarControls({
                   lineHeight: 1.25,
                 }}
               >
-                결과값 도출
+                결과값 도출 (.md 저장)
               </button>
             </div>
 

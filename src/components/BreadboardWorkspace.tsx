@@ -17,6 +17,7 @@ import { ChipConfigPanel } from "@/components/boardkit/ChipConfigPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FlowNarrativePanel } from "@/components/inspector/FlowNarrativePanel";
+import { BuildPromptPreviewDialog } from "@/components/boardkit/BuildPromptPreviewDialog";
 
 import type { BoardChipInstance, BoardState } from "@/core/board/boardTypes";
 import { autoConnectSelectedChips, disconnectEdgesAmongSelected } from "@/core/board/autoConnect";
@@ -43,6 +44,10 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
   const [connectionPreview, setConnectionPreview] = useState<ConnectionPreviewState | undefined>(undefined);
   const [validationReport, setValidationReport] = useState(() => validateBoard(board));
   const [executionReport, setExecutionReport] = useState<BoardExecutionReport | null>(null);
+  const [promptPreviewOpen, setPromptPreviewOpen] = useState(false);
+  const [promptPreviewMd, setPromptPreviewMd] = useState("");
+  const [promptPreviewLoading, setPromptPreviewLoading] = useState(false);
+  const [promptPreviewError, setPromptPreviewError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
 
   const [chipConfigOpen, setChipConfigOpen] = useState(false);
@@ -133,13 +138,20 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
     URL.revokeObjectURL(url);
   }, [board]);
 
-  const onExportBuildPromptMd = useCallback(async () => {
+  const buildExecutablePromptForBoard = useCallback(async () => {
     const report = await executeBoard(board, { validateBeforeRun: true });
     const md = buildExecutablePromptMarkdown(board, {
       executionReport: report,
       includeBoardLogs: true,
       boardLogsMax: 64,
     });
+    setExecutionReport(report);
+    setValidationReport(report.validation ?? validateBoard(board));
+    return { report, md };
+  }, [board]);
+
+  const onExportBuildPromptMd = useCallback(async () => {
+    const { md } = await buildExecutablePromptForBoard();
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -147,9 +159,38 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
     a.download = `${safeBoardFileBase(board.name)}_실행프로그램_프롬프트.md`;
     a.click();
     URL.revokeObjectURL(url);
-    setExecutionReport(report);
-    setValidationReport(report.validation ?? validateBoard(board));
-  }, [board]);
+  }, [buildExecutablePromptForBoard]);
+
+  const onPreviewBuildPromptMd = useCallback(async () => {
+    setPromptPreviewOpen(true);
+    setPromptPreviewLoading(true);
+    setPromptPreviewError(null);
+    setPromptPreviewMd("");
+    try {
+      const { md } = await buildExecutablePromptForBoard();
+      setPromptPreviewMd(md);
+    } catch (e) {
+      setPromptPreviewError(e instanceof Error ? e.message : "프롬프트를 만들지 못했습니다.");
+    } finally {
+      setPromptPreviewLoading(false);
+    }
+  }, [buildExecutablePromptForBoard]);
+
+  const onDownloadPromptPreviewMd = useCallback(() => {
+    if (!promptPreviewMd) return;
+    const blob = new Blob([promptPreviewMd], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeBoardFileBase(board.name)}_실행프로그램_프롬프트.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [board.name, promptPreviewMd]);
+
+  const onCopyPromptPreviewMd = useCallback(async () => {
+    if (!promptPreviewMd) return;
+    await navigator.clipboard.writeText(promptPreviewMd);
+  }, [promptPreviewMd]);
 
   const onImportJson = useCallback(
     (json: string) => {
@@ -507,6 +548,7 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
             onCopyJson={onCopyJson}
             onDownloadJson={onDownloadJson}
             onExportBuildPromptMd={onExportBuildPromptMd}
+            onPreviewBuildPromptMd={onPreviewBuildPromptMd}
             onImportJson={onImportJson}
             isRunning={running}
             boardLibrary={{
@@ -524,6 +566,17 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
           <BoardSidebarPalette {...sidebarShared} />
         </div>
       </div>
+
+      <BuildPromptPreviewDialog
+        open={promptPreviewOpen}
+        onOpenChange={setPromptPreviewOpen}
+        markdown={promptPreviewMd}
+        loading={promptPreviewLoading}
+        error={promptPreviewError}
+        onCopy={onCopyPromptPreviewMd}
+        onDownload={onDownloadPromptPreviewMd}
+        fileBaseName={`${safeBoardFileBase(board.name)}_실행프로그램_프롬프트`}
+      />
 
       {chipConfigOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4 sm:p-6">

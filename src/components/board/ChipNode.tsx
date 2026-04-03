@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { NodeProps } from 'reactflow';
 import type { ReactFlowChipNodeData, ReactFlowChipPortData } from '@/core/board/reactFlowMapper';
@@ -50,17 +50,37 @@ function groupPorts(ports: ReactFlowChipPortData[]) {
   };
 }
 
+const SIDE_PORT_STEP = 28;
+/** 통계 그리드·하단 패딩 위 최소 여백(px) */
+const SIDE_PORT_FOOTER_CLEARANCE = 52;
+/** 포트 스택이 노드 밖으로 밀리면 이 값 이상으로만 위로 당김 */
+const SIDE_PORT_BOTTOM_MIN = 22;
+
+function sidePortBottomOffsets(portsLen: number, nodeHeight: number): number[] {
+  if (portsLen === 0) return [];
+  const span = (portsLen - 1) * SIDE_PORT_STEP;
+  const maxBottom = Math.max(SIDE_PORT_FOOTER_CLEARANCE + 8, nodeHeight - 18);
+  let base = SIDE_PORT_FOOTER_CLEARANCE;
+  if (base + span > maxBottom) {
+    base = Math.max(SIDE_PORT_BOTTOM_MIN, maxBottom - span);
+  }
+  /** 정의 배열 순서 = 화면에서 위→아래 (첫 포트가 더 위). bottom 오프셋은 클수록 위쪽이므로 역순 부여 */
+  return Array.from({ length: portsLen }, (_, i) => base + (portsLen - 1 - i) * SIDE_PORT_STEP);
+}
+
 function renderPortColumn(
   ports: ReactFlowChipPortData[],
   side: 'left' | 'right' | 'top' | 'bottom',
-  disabled: boolean
+  disabled: boolean,
+  sideBottomOffsets?: number[]
 ) {
   return ports.map((port, index) => {
     const baseStyle: CSSProperties =
       side === 'left' || side === 'right'
         ? {
             position: 'absolute',
-            top: 30 + index * 28,
+            bottom:
+              sideBottomOffsets?.[index] ?? SIDE_PORT_FOOTER_CLEARANCE + index * SIDE_PORT_STEP,
             [side]: 0,
           }
         : {
@@ -83,26 +103,54 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
   const led = ledColor(data.runtime.executionStatus);
   const disabled = Boolean(data.flags.disabled);
 
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [nodeHeightPx, setNodeHeightPx] = useState(120);
+
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const measure = () => {
+      const h = el.getBoundingClientRect().height;
+      if (h > 0) setNodeHeightPx(h);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const leftBottoms = useMemo(
+    () => sidePortBottomOffsets(ports.left.length, nodeHeightPx),
+    [ports.left.length, nodeHeightPx]
+  );
+  const rightBottoms = useMemo(
+    () => sidePortBottomOffsets(ports.right.length, nodeHeightPx),
+    [ports.right.length, nodeHeightPx]
+  );
+
+  const mono = 'ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace';
+
   return (
     <div
+      ref={rootRef}
       style={{
         position: 'relative',
         minWidth: 96,
         minHeight: 64,
         width: '100%',
         height: '100%',
-        borderRadius: 18,
-        padding: '14px 14px 12px',
+        borderRadius: 6,
+        padding: '18px 14px 12px',
         background: disabled
-          ? 'linear-gradient(180deg, rgba(51,65,85,0.82), rgba(30,41,59,0.9))'
-          : 'linear-gradient(180deg, rgba(15,23,42,0.97), rgba(30,41,59,0.95))',
-        border: selected ? `2px solid ${accent}` : '1px solid rgba(148,163,184,0.28)',
+          ? 'linear-gradient(180deg, #44403c 0%, #292524 55%, #1c1917 100%)'
+          : 'linear-gradient(180deg, #3f3c3a 0%, #292524 42%, #1a1816 100%)',
+        border: selected ? `2px solid ${accent}` : '1px solid rgba(28, 25, 23, 0.95)',
         boxShadow: selected
-          ? `0 0 0 3px ${accent}22, 0 18px 40px rgba(15, 23, 42, 0.34)`
+          ? `0 0 0 2px ${accent}33, inset 0 1px 0 rgba(255,255,255,0.07), 0 12px 28px rgba(0,0,0,0.45)`
           : dragging
-            ? '0 16px 40px rgba(15, 23, 42, 0.38)'
-            : '0 10px 26px rgba(15, 23, 42, 0.22)',
-        color: '#e2e8f0',
+            ? 'inset 0 1px 0 rgba(255,255,255,0.06), 0 14px 32px rgba(0,0,0,0.5)'
+            : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 20px rgba(0,0,0,0.4)',
+        color: '#e7e5e4',
         overflow: 'visible',
         transition: 'box-shadow 160ms ease, border-color 160ms ease, transform 160ms ease',
         transform: dragging ? 'scale(1.01)' : 'scale(1)',
@@ -111,15 +159,43 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
       <div
         style={{
           position: 'absolute',
-          inset: 0,
-          borderRadius: 18,
+          left: '50%',
+          top: 0,
+          transform: 'translateX(-50%)',
+          width: 22,
+          height: 8,
+          background: '#1c1917',
+          borderRadius: '0 0 10px 10px',
+          boxShadow: 'inset 0 2px 3px rgba(0,0,0,0.5)',
           pointerEvents: 'none',
-          background: `radial-gradient(circle at top right, ${accent}18 0%, transparent 34%)`,
+          zIndex: 2,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          left: 8,
+          right: 8,
+          top: 10,
+          height: 2,
+          borderRadius: 1,
+          background: accent,
+          opacity: 0.85,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: 6,
+          pointerEvents: 'none',
+          background: `linear-gradient(135deg, ${accent}0f 0%, transparent 42%)`,
         }}
       />
 
-      {renderPortColumn(ports.left, 'left', disabled)}
-      {renderPortColumn(ports.right, 'right', disabled)}
+      {renderPortColumn(ports.left, 'left', disabled, leftBottoms)}
+      {renderPortColumn(ports.right, 'right', disabled, rightBottoms)}
       {renderPortColumn(ports.top, 'top', disabled)}
       {renderPortColumn(ports.bottom, 'bottom', disabled)}
 
@@ -131,14 +207,16 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 28,
-                height: 28,
-                borderRadius: 10,
-                background: `${accent}22`,
+                width: 26,
+                height: 26,
+                borderRadius: 3,
+                background: '#1c1917',
                 color: accent,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: 800,
-                border: `1px solid ${accent}44`,
+                fontFamily: mono,
+                border: `1px solid ${accent}55`,
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
               }}
             >
               {data.icon.slice(0, 2).toUpperCase()}
@@ -146,9 +224,10 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
             <div style={{ minWidth: 0 }}>
               <div
                 style={{
-                  color: '#f8fafc',
-                  fontSize: 16,
+                  color: '#fafaf9',
+                  fontSize: 15,
                   fontWeight: 800,
+                  letterSpacing: 0.02,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -156,7 +235,16 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
               >
                 {data.title}
               </div>
-              <div style={{ color: '#94a3b8', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
+              <div
+                style={{
+                  color: '#a8a29e',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  fontFamily: mono,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.06,
+                }}
+              >
                 {data.chipType}
               </div>
             </div>
@@ -164,8 +252,8 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
 
           <div
             style={{
-              color: '#cbd5e1',
-              fontSize: 13,
+              color: '#d6d3d1',
+              fontSize: 12,
               lineHeight: 1.35,
               minHeight: 28,
               display: '-webkit-box',
@@ -180,25 +268,27 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
           <span
+            title="상태 LED"
             style={{
-              width: 12,
-              height: 12,
-              borderRadius: '999px',
+              width: 10,
+              height: 5,
+              borderRadius: 1,
               background: led,
-              boxShadow: `0 0 12px ${led}`,
-              border: '1px solid rgba(255,255,255,0.35)',
+              boxShadow: `0 0 8px ${led}, inset 0 1px 0 rgba(255,255,255,0.25)`,
+              border: '1px solid rgba(0,0,0,0.35)',
             }}
           />
           <span
             style={{
-              padding: '4px 8px',
-              borderRadius: 999,
-              fontSize: 11,
+              padding: '3px 7px',
+              borderRadius: 2,
+              fontSize: 10,
               fontWeight: 800,
-              letterSpacing: 0.4,
-              background: `${accent}1c`,
+              letterSpacing: 0.08,
+              fontFamily: mono,
+              background: '#1c1917',
               color: accent,
-              border: `1px solid ${accent}33`,
+              border: `1px solid ${accent}44`,
               textTransform: 'uppercase',
             }}
           >
@@ -211,13 +301,14 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
         {data.executable ? (
           <span
             style={{
-              padding: '3px 8px',
-              borderRadius: 999,
-              background: 'rgba(34,197,94,0.14)',
-              color: '#86efac',
-              fontSize: 12,
+              padding: '2px 7px',
+              borderRadius: 2,
+              background: 'rgba(22, 101, 52, 0.35)',
+              color: '#bbf7d0',
+              fontSize: 11,
               fontWeight: 700,
-              border: '1px solid rgba(34,197,94,0.24)',
+              fontFamily: mono,
+              border: '1px solid rgba(34,197,94,0.35)',
             }}
           >
             EXECUTABLE
@@ -226,13 +317,14 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
         {data.flags.isStartChip ? (
           <span
             style={{
-              padding: '3px 8px',
-              borderRadius: 999,
-              background: 'rgba(14,165,233,0.14)',
-              color: '#7dd3fc',
-              fontSize: 12,
+              padding: '2px 7px',
+              borderRadius: 2,
+              background: 'rgba(12, 74, 110, 0.4)',
+              color: '#bae6fd',
+              fontSize: 11,
               fontWeight: 700,
-              border: '1px solid rgba(14,165,233,0.26)',
+              fontFamily: mono,
+              border: '1px solid rgba(14,165,233,0.35)',
             }}
           >
             START
@@ -241,13 +333,14 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
         {disabled ? (
           <span
             style={{
-              padding: '3px 8px',
-              borderRadius: 999,
-              background: 'rgba(239,68,68,0.14)',
-              color: '#fca5a5',
-              fontSize: 12,
+              padding: '2px 7px',
+              borderRadius: 2,
+              background: 'rgba(127, 29, 29, 0.45)',
+              color: '#fecaca',
+              fontSize: 11,
               fontWeight: 700,
-              border: '1px solid rgba(239,68,68,0.24)',
+              fontFamily: mono,
+              border: '1px solid rgba(239,68,68,0.35)',
             }}
           >
             DISABLED
@@ -265,36 +358,38 @@ function ChipNodeComponent({ data, selected, dragging }: ChipNodeProps) {
       >
         <div
           style={{
-            borderRadius: 10,
+            borderRadius: 3,
             padding: '6px 8px',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(148,163,184,0.12)',
+            background: 'rgba(0,0,0,0.22)',
+            border: '1px solid rgba(120,113,108,0.35)',
           }}
         >
-          <div style={{ color: '#94a3b8', fontSize: 11, marginBottom: 3 }}>SIZE</div>
-          <div style={{ color: '#f8fafc', fontSize: 13, fontWeight: 700 }}>{data.size}</div>
+          <div style={{ color: '#a8a29e', fontSize: 10, fontFamily: mono, marginBottom: 3 }}>SIZE</div>
+          <div style={{ color: '#fafaf9', fontSize: 12, fontWeight: 700, fontFamily: mono }}>{data.size}</div>
         </div>
         <div
           style={{
-            borderRadius: 10,
+            borderRadius: 3,
             padding: '6px 8px',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(148,163,184,0.12)',
+            background: 'rgba(0,0,0,0.22)',
+            border: '1px solid rgba(120,113,108,0.35)',
           }}
         >
-          <div style={{ color: '#94a3b8', fontSize: 11, marginBottom: 3 }}>PORTS</div>
-          <div style={{ color: '#f8fafc', fontSize: 13, fontWeight: 700 }}>{data.ports.length}</div>
+          <div style={{ color: '#a8a29e', fontSize: 10, fontFamily: mono, marginBottom: 3 }}>PORTS</div>
+          <div style={{ color: '#fafaf9', fontSize: 12, fontWeight: 700, fontFamily: mono }}>{data.ports.length}</div>
         </div>
         <div
           style={{
-            borderRadius: 10,
+            borderRadius: 3,
             padding: '6px 8px',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(148,163,184,0.12)',
+            background: 'rgba(0,0,0,0.22)',
+            border: '1px solid rgba(120,113,108,0.35)',
           }}
         >
-          <div style={{ color: '#94a3b8', fontSize: 11, marginBottom: 3 }}>STATE</div>
-          <div style={{ color: '#f8fafc', fontSize: 13, fontWeight: 700 }}>{data.runtime.executionStatus}</div>
+          <div style={{ color: '#a8a29e', fontSize: 10, fontFamily: mono, marginBottom: 3 }}>STATE</div>
+          <div style={{ color: '#fafaf9', fontSize: 12, fontWeight: 700, fontFamily: mono }}>
+            {data.runtime.executionStatus}
+          </div>
         </div>
       </div>
     </div>
