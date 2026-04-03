@@ -11,6 +11,7 @@ import {
 } from "@/components/boardkit/BoardSidebar";
 import { ExecutionPanel } from "@/components/boardkit/ExecutionPanel";
 import { ValidationPanel } from "@/components/boardkit/ValidationPanel";
+import { UserManualDialog } from "@/components/boardkit/BreadboardUserManual";
 import { InspectorPanel, type BoardSelection, type ConnectionPreviewState } from "@/components/boardkit/InspectorPanel";
 import { ChipConfigPanel } from "@/components/boardkit/ChipConfigPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -132,8 +133,13 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
     URL.revokeObjectURL(url);
   }, [board]);
 
-  const onExportBuildPromptMd = useCallback(() => {
-    const md = buildExecutablePromptMarkdown(board);
+  const onExportBuildPromptMd = useCallback(async () => {
+    const report = await executeBoard(board, { validateBeforeRun: true });
+    const md = buildExecutablePromptMarkdown(board, {
+      executionReport: report,
+      includeBoardLogs: true,
+      boardLogsMax: 64,
+    });
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -141,6 +147,8 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
     a.download = `${safeBoardFileBase(board.name)}_실행프로그램_프롬프트.md`;
     a.click();
     URL.revokeObjectURL(url);
+    setExecutionReport(report);
+    setValidationReport(report.validation ?? validateBoard(board));
   }, [board]);
 
   const onImportJson = useCallback(
@@ -407,23 +415,26 @@ export function BreadboardWorkspace({ initialBoard, library }: Props) {
         <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-t-xl border-t border-zinc-800/80 bg-zinc-900/50 px-0">
           <div className="flex min-h-0 min-w-0 flex-col overflow-hidden p-3">
             <Tabs defaultValue="inspector" className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
-              <TabsList className="h-11 w-full shrink-0 justify-start rounded-lg border border-zinc-700/80 bg-zinc-950/80 p-1">
-                <TabsTrigger value="inspector" className="text-sm sm:text-base">
-                  인스펙터
-                </TabsTrigger>
-                <TabsTrigger value="validation" className="text-sm sm:text-base">
-                  검증
-                </TabsTrigger>
-                <TabsTrigger value="execution" className="text-sm sm:text-base">
-                  실행
-                </TabsTrigger>
-                <TabsTrigger value="flow" className="text-sm sm:text-base">
-                  연결 설명
-                </TabsTrigger>
-                <TabsTrigger value="history" className="text-sm sm:text-base">
-                  히스토리
-                </TabsTrigger>
-              </TabsList>
+              <div className="flex min-h-11 w-full shrink-0 items-center gap-2">
+                <TabsList className="h-11 min-w-0 flex-1 justify-start rounded-lg border border-zinc-700/80 bg-zinc-950/80 p-1">
+                  <TabsTrigger value="inspector" className="text-sm sm:text-base">
+                    인스펙터
+                  </TabsTrigger>
+                  <TabsTrigger value="validation" className="text-sm sm:text-base">
+                    검증
+                  </TabsTrigger>
+                  <TabsTrigger value="execution" className="text-sm sm:text-base">
+                    실행
+                  </TabsTrigger>
+                  <TabsTrigger value="flow" className="text-sm sm:text-base">
+                    연결 설명
+                  </TabsTrigger>
+                  <TabsTrigger value="history" className="text-sm sm:text-base">
+                    히스토리
+                  </TabsTrigger>
+                </TabsList>
+                <UserManualDialog />
+              </div>
 
               <ScrollArea className="mt-3 min-h-0 min-w-0 flex-1 pr-2 [&_[data-slot=scroll-area-viewport]]:max-h-full">
                 <TabsContent value="inspector" className="m-0">

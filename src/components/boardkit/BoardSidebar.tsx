@@ -32,7 +32,7 @@ export type BoardSidebarControlsProps = BoardSidebarSharedProps & {
   onCopyJson?: () => void | Promise<void>;
   onDownloadJson?: () => void;
   /** 실행 프로그램 구현용 마크다운 프롬프트 파일 저장 */
-  onExportBuildPromptMd?: () => void;
+  onExportBuildPromptMd?: () => void | Promise<void>;
   onImportJson?: (json: string) => void;
   isRunning?: boolean;
   /** 보드 목록·이름 변경·삭제(로컬 저장) */
